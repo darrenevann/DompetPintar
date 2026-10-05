@@ -1,122 +1,658 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const DompetPintarApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// main app
+class DompetPintarApp extends StatelessWidget {
+  const DompetPintarApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Dompet Pintar',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: const Color(0xFFFAF9F6), 
+        fontFamily: 'Roboto', 
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MainScreen(),
+      debugShowCheckedModeBanner: false,
+    ); 
+  }
+}
+
+// model transaksi
+class Transaksi {
+  final String id;
+  final String judul;
+  final double nominal;
+  final String tipe;
+  final DateTime tanggal;
+
+  Transaksi({
+    required this.id,
+    required this.judul,
+    required this.nominal,
+    required this.tipe,
+    required this.tanggal,
+  });
+}
+
+// widget brutalist card
+class BrutalistCard extends StatelessWidget {
+  final Widget child;
+  final Color backgroundColor;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry padding;
+
+  const BrutalistCard({
+    super.key,
+    required this.child,
+    this.backgroundColor = Colors.white,
+    this.width,
+    this.height,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0, 
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// main screen
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MainScreenState extends State<MainScreen> {
+  // state
+  int _selectedIndex = 0;
 
-  void _incrementCounter() {
+  // data dummy
+  final List<Transaksi> _daftarTransaksi = [
+    Transaksi(id: '1', judul: 'Gaji Bulanan', nominal: 5000000, tipe: 'Pemasukan', tanggal: DateTime.now()),
+    Transaksi(id: '2', judul: 'Makan Siang', nominal: 50000, tipe: 'Pengeluaran', tanggal: DateTime.now()),
+    Transaksi(id: '3', judul: 'Beli Kuota', nominal: 100000, tipe: 'Pengeluaran', tanggal: DateTime.now()),
+  ];
+
+  // navigasi fungsi
+  void _onItemTapped(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _selectedIndex = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    // daftar halaman
+    final List<Widget> _halaman = [
+      DashboardScreen(daftarTransaksi: _daftarTransaksi),
+      TransaksiScreen(daftarTransaksi: _daftarTransaksi), 
+      const BudgetScreen(),
+      const LaporanScreen(),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      // body
+      body: SafeArea(
+        child: _halaman[_selectedIndex],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      // floating button
+      floatingActionButton: BrutalistCard(
+        backgroundColor: const Color(0xFFFFD166), // Kuning
+        padding: const EdgeInsets.all(0),
+        width: 60,
+        height: 60,
+        child: IconButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Form Tambah Transaksi')),
+            );
+          },
+          icon: const Icon(Icons.add, size: 32, color: Colors.black),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // navigasi bawah
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.black, width: 3)),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: const Color(0xFFFAF9F6),
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),
+            BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Transaksi'),
+            BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: 'Budget'),
+            BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Laporan'),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900),
+          onTap: _onItemTapped,
+        ),
       ),
     );
   }
 }
+
+// halaman dashboard
+class DashboardScreen extends StatelessWidget {
+  final List<Transaksi> daftarTransaksi;
+
+  const DashboardScreen({super.key, required this.daftarTransaksi});
+
+  @override
+  Widget build(BuildContext context) {
+    // Menghitung total statis
+    double totalSaldo = 15000000;
+    double totalPemasukan = 5000000;
+    double totalPengeluaran = 150000;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // app bar custom
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Label Nama Aplikasi
+              const BrutalistCard(
+                backgroundColor: Color(0xFFFFD166), // Aksen kuning
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Text(
+                  "DompetPintar",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+              // Ikon Aksi
+              Row(
+                children: const [
+                  BrutalistCard(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(Icons.settings, size: 24),
+                  ),
+                  SizedBox(width: 12),
+                  BrutalistCard(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(Icons.search, size: 24),
+                  ),
+                ],
+              )
+            ],
+          ),
+          
+          // header saldo
+          const Text(
+            "Saldo Anda.\nKelola sekarang.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // card saldo utama
+          BrutalistCard(
+            backgroundColor: Colors.white,
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "TOTAL SALDO",
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Rp ${totalSaldo.toStringAsFixed(0)}",
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // ringkasan pemasukan & pengeluaran
+          Row(
+            children: [
+              Expanded(
+                child: BrutalistCard(
+                  backgroundColor: const Color(0xFFB5E48C), // Hijau
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.arrow_downward, size: 28),
+                      const SizedBox(height: 12),
+                      const Text("Pemasukan", style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text("Rp ${totalPemasukan.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: BrutalistCard(
+                  backgroundColor: const Color(0xFFFF9E9E), // Merah muda
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.arrow_upward, size: 28),
+                      const SizedBox(height: 12),
+                      const Text("Pengeluaran", style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text("Rp ${totalPengeluaran.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          
+          // judul riwayat
+          const Text(
+            "Transaksi Terakhir",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          
+          // daftar transaksi
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: daftarTransaksi.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final trx = daftarTransaksi[index];
+              return BrutalistCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    BrutalistCard(
+                      backgroundColor: trx.tipe == 'Pemasukan' ? const Color(0xFFB5E48C) : const Color(0xFFFF9E9E),
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        trx.tipe == 'Pemasukan' ? Icons.attach_money : Icons.money_off,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(trx.judul, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(trx.tipe, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      "Rp ${trx.nominal.toStringAsFixed(0)}",
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// halaman transaksi
+class TransaksiScreen extends StatefulWidget {
+  final List<Transaksi> daftarTransaksi;
+
+  const TransaksiScreen({super.key, required this.daftarTransaksi});
+
+  @override
+  State<TransaksiScreen> createState() => _TransaksiScreenState();
+}
+
+class _TransaksiScreenState extends State<TransaksiScreen> {
+  // state filter lokal
+  String _filterAktif = 'Semua';
+
+  @override
+  Widget build(BuildContext context) {
+    // logika filter data
+    final dataTampil = widget.daftarTransaksi.where((trx) {
+      if (_filterAktif == 'Semua') return true;
+      return trx.tipe == _filterAktif;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Riwayat.\nCek uangmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // baris filter
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              _buildFilterButton('Semua'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Pemasukan'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Pengeluaran'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // daftar transaksi
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            itemCount: dataTampil.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final trx = dataTampil[index];
+              
+              // gesture detector
+              return GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Detail: ${trx.judul}')),
+                  );
+                },
+                child: BrutalistCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Row(
+                    children: [
+                      BrutalistCard(
+                        backgroundColor: trx.tipe == 'Pemasukan' 
+                            ? const Color(0xFFB5E48C) 
+                            : const Color(0xFFFF9E9E),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          trx.tipe == 'Pemasukan' ? Icons.arrow_downward : Icons.arrow_upward,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(trx.judul, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                            const SizedBox(height: 4),
+                            Text(
+                              "${trx.tanggal.day}/${trx.tanggal.month}/${trx.tanggal.year}", 
+                              style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold)
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        "Rp ${trx.nominal.toStringAsFixed(0)}",
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // widget filter button
+  Widget _buildFilterButton(String label) {
+    final bool isAktif = _filterAktif == label;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filterAktif = label;
+        });
+      },
+      child: BrutalistCard(
+        backgroundColor: isAktif ? const Color(0xFFFFD166) : Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+// halaman budget
+class BudgetScreen extends StatelessWidget {
+  const BudgetScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // data dummy
+    final List<Map<String, dynamic>> daftarBudget = [
+      {'kategori': 'Makanan', 'terpakai': 1500000, 'total': 2000000, 'warna': const Color(0xFFB5E48C)},
+      {'kategori': 'Transportasi', 'terpakai': 850000, 'total': 750000, 'warna': const Color(0xFFFF9E9E)},
+      {'kategori': 'Hiburan', 'terpakai': 300000, 'total': 1000000, 'warna': const Color(0xFFFFD166)},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Anggaran.\nKendalikan uangmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // daftar budget
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            itemCount: daftarBudget.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final budget = daftarBudget[index];
+              // perhitungan rasio
+              final double rasio = (budget['terpakai'] / budget['total']).clamp(0.0, 1.0);
+              
+              return BrutalistCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // info teks
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          budget['kategori'], 
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)
+                        ),
+                        Text(
+                          "Rp ${budget['terpakai']} / Rp ${budget['total']}",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // progress bar custom
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double maxWidth = constraints.maxWidth;
+                        return Stack(
+                          children: [
+                            // background bar
+                            Container(
+                              height: 24,
+                              width: maxWidth,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            // foreground bar
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              child: Container(
+                                height: 24,
+                                width: maxWidth * rasio,
+                                decoration: BoxDecoration(
+                                  color: budget['warna'],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.black, width: 2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// halaman laporan
+class LaporanScreen extends StatelessWidget {
+  const LaporanScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // data grafik statis
+    final List<Map<String, dynamic>> dataGrafik = [
+      {'bulan': 'Jan', 'nilai': 0.4},
+      {'bulan': 'Feb', 'nilai': 0.7},
+      {'bulan': 'Mar', 'nilai': 0.5},
+      {'bulan': 'Apr', 'nilai': 0.9},
+      {'bulan': 'Mei', 'nilai': 0.6},
+      {'bulan': 'Jun', 'nilai': 0.8},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Laporan.\nAnalisis finansialmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // card grafik
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: BrutalistCard(
+            height: 300,
+            child: Column(
+              children: [
+                const Text(
+                  "Pengeluaran 6 Bulan Terakhir", 
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                ),
+                
+                const Spacer(), 
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: dataGrafik.map((data) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // batang grafik
+                        Container(
+                          width: 32,
+                          height: (180 * data['nilai']).toDouble(), 
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB5E48C),
+                            border: Border.all(color: Colors.black, width: 2),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // label bulan
+                        Text(
+                          data['bulan'], 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
