@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+String formatRupiah(num value) {
+  return NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp. ',
+    decimalDigits: 2,
+  ).format(value);
+}
 
 void main() {
   runApp(const DompetPintarApp());
@@ -28,7 +37,6 @@ class Transaksi {
   final String judul;
   final double nominal;
   final String tipe;
-  final String kategori;
   final DateTime tanggal;
 
   Transaksi({
@@ -36,7 +44,6 @@ class Transaksi {
     required this.judul,
     required this.nominal,
     required this.tipe,
-    required this.kategori,
     required this.tanggal,
   });
 }
@@ -94,14 +101,13 @@ class _MainScreenState extends State<MainScreen> {
   // state
   int _selectedIndex = 0;
 
-  // data transaksi
+  // data dummy
   final List<Transaksi> _daftarTransaksi = [
     Transaksi(
       id: '1',
       judul: 'Gaji Bulanan',
       nominal: 5000000,
       tipe: 'Pemasukan',
-      kategori: 'Lainnya',
       tanggal: DateTime.now(),
     ),
     Transaksi(
@@ -109,7 +115,6 @@ class _MainScreenState extends State<MainScreen> {
       judul: 'Makan Siang',
       nominal: 50000,
       tipe: 'Pengeluaran',
-      kategori: 'Makanan',
       tanggal: DateTime.now(),
     ),
     Transaksi(
@@ -117,7 +122,6 @@ class _MainScreenState extends State<MainScreen> {
       judul: 'Beli Kuota',
       nominal: 100000,
       tipe: 'Pengeluaran',
-      kategori: 'Lainnya',
       tanggal: DateTime.now(),
     ),
   ];
@@ -129,222 +133,10 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // fungsi tambah transaksi
-  void _tambahTransaksi() {
-    final TextEditingController judulController = TextEditingController();
-    final TextEditingController nominalController = TextEditingController();
-
-    String tipeDipilih = 'Pengeluaran';
-    String kategoriDipilih = 'Makanan';
-    DateTime tanggalDipilih = DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text(
-                'Tambah Transaksi',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: judulController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Transaksi',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextField(
-                      controller: nominalController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Nominal',
-                        prefixText: 'Rp ',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: tipeDipilih,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipe Transaksi',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Pemasukan',
-                          child: Text('Pemasukan'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Pengeluaran',
-                          child: Text('Pengeluaran'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          tipeDipilih = value!;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: kategoriDipilih,
-                      decoration: const InputDecoration(
-                        labelText: 'Kategori',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Makanan',
-                          child: Text('Makanan'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Transportasi',
-                          child: Text('Transportasi'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Hiburan',
-                          child: Text('Hiburan'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Belanja',
-                          child: Text('Belanja'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Lainnya',
-                          child: Text('Lainnya'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          kategoriDipilih = value!;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${tanggalDipilih.day}/${tanggalDipilih.month}/${tanggalDipilih.year}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final DateTime? tanggalBaru =
-                                await showDatePicker(
-                              context: context,
-                              initialDate: tanggalDipilih,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-
-                            if (tanggalBaru != null) {
-                              setDialogState(() {
-                                tanggalDipilih = tanggalBaru;
-                              });
-                            }
-                          },
-                          child: const Text('Pilih Tanggal'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (judulController.text.isEmpty ||
-                        nominalController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Nama dan nominal harus diisi.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final double? nominal =
-                        double.tryParse(nominalController.text);
-
-                    if (nominal == null || nominal <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Nominal harus berupa angka.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    setState(() {
-                      _daftarTransaksi.add(
-                        Transaksi(
-                          id: DateTime.now()
-                              .millisecondsSinceEpoch
-                              .toString(),
-                          judul: judulController.text,
-                          nominal: nominal,
-                          tipe: tipeDipilih,
-                          kategori: kategoriDipilih,
-                          tanggal: tanggalDipilih,
-                        ),
-                      );
-                    });
-
-                    Navigator.pop(context);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Transaksi berhasil ditambahkan.',
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Tambah'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // daftar halaman
-    final List<Widget> _halaman = [
+    final List<Widget> halaman = [
       DashboardScreen(daftarTransaksi: _daftarTransaksi),
       TransaksiScreen(daftarTransaksi: _daftarTransaksi),
       const BudgetScreen(),
@@ -353,47 +145,33 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       // body
-      body: SafeArea(
-        child: _halaman[_selectedIndex],
-      ),
-
+      body: SafeArea(child: halaman[_selectedIndex]),
       // floating button
       floatingActionButton: BrutalistCard(
-        backgroundColor: const Color(0xFFFFD166),
+        backgroundColor: const Color(0xFFFFD166), // Kuning
         padding: const EdgeInsets.all(0),
         width: 60,
         height: 60,
         child: IconButton(
-          onPressed: _tambahTransaksi,
-          icon: const Icon(
-            Icons.add,
-            size: 32,
-            color: Colors.black,
-          ),
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Form Tambah Transaksi')),
+            );
+          },
+          icon: const Icon(Icons.add, size: 32, color: Colors.black),
         ),
       ),
-
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked,
-
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       // navigasi bawah
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Colors.black,
-              width: 3,
-            ),
-          ),
+          border: Border(top: BorderSide(color: Colors.black, width: 3)),
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           backgroundColor: const Color(0xFFFAF9F6),
           items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Dashboard',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),
             BottomNavigationBarItem(
               icon: Icon(Icons.list_alt),
               label: 'Transaksi',
@@ -410,9 +188,7 @@ class _MainScreenState extends State<MainScreen> {
           currentIndex: _selectedIndex,
           selectedItemColor: Colors.black,
           unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900),
           onTap: _onItemTapped,
         ),
       ),
@@ -421,13 +197,40 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // halaman dashboard
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
 
-  const DashboardScreen({
-    super.key,
-    required this.daftarTransaksi,
-  });
+  const DashboardScreen({super.key, required this.daftarTransaksi});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isSearchExpanded = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearchExpanded = !_isSearchExpanded;
+    });
+
+    if (_isSearchExpanded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _searchFocusNode.requestFocus();
+      });
+    } else {
+      _searchFocusNode.unfocus();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -442,56 +245,104 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // app bar custom
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const BrutalistCard(
-                backgroundColor: Color(0xFFFFD166),
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: Text(
-                  "DompetPintar",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-              Row(
-                children: const [
-                  BrutalistCard(
-                    padding: EdgeInsets.all(10),
-                    child: Icon(
-                      Icons.settings,
-                      size: 24,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final maxSearchWidth = (constraints.maxWidth - 210).clamp(
+                0.0,
+                220.0,
+              );
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: BrutalistCard(
+                      backgroundColor: const Color(0xFFFFD166),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      child: const Text(
+                        'DompetPintar',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
                     ),
                   ),
-                  SizedBox(width: 12),
-                  BrutalistCard(
-                    padding: EdgeInsets.all(10),
-                    child: Icon(
-                      Icons.search,
-                      size: 24,
-                    ),
+                  const SizedBox(width: 12),
+                  Row(
+                    children: [
+                      const BrutalistCard(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(Icons.settings, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: _isSearchExpanded ? maxSearchWidth : 0,
+                        curve: Curves.easeInOutCubic,
+                        child: ClipRect(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: BrutalistCard(
+                              padding: const EdgeInsets.all(8),
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                textInputAction: TextInputAction.search,
+                                keyboardType: TextInputType.text,
+                                decoration: const InputDecoration(
+                                  hintText: 'Cari transaksi...',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: _toggleSearch,
+                        child: const BrutalistCard(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(Icons.search, size: 24),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
+          const SizedBox(height: 28),
 
           // header saldo
-          const Text(
-            "Saldo Anda.\nKelola sekarang.",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                height: 1.1,
+              ),
+              children: [
+                TextSpan(text: 'Saldo Anda.\n'),
+                TextSpan(
+                  text: 'Kelola sekarang',
+                  style: TextStyle(
+                    color: Color(0xFF606060),
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
-
           const SizedBox(height: 24),
 
           // card saldo utama
@@ -510,7 +361,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Rp ${totalSaldo.toStringAsFixed(0)}",
+                  formatRupiah(totalSaldo),
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
@@ -519,7 +370,6 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 24),
 
           // ringkasan pemasukan & pengeluaran
@@ -527,26 +377,19 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: BrutalistCard(
-                  backgroundColor: const Color(0xFFB5E48C),
+                  backgroundColor: const Color(0xFFB5E48C), // Hijau
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.arrow_downward,
-                        size: 28,
-                      ),
+                      const Icon(Icons.arrow_downward, size: 28),
                       const SizedBox(height: 12),
                       const Text(
                         "Pemasukan",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        "Rp ${totalPemasukan.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        formatRupiah(totalPemasukan),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ],
                   ),
@@ -555,26 +398,19 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: BrutalistCard(
-                  backgroundColor: const Color(0xFFFF9E9E),
+                  backgroundColor: const Color(0xFFFF9E9E), // Merah muda
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.arrow_upward,
-                        size: 28,
-                      ),
+                      const Icon(Icons.arrow_upward, size: 28),
                       const SizedBox(height: 12),
                       const Text(
                         "Pengeluaran",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        "Rp ${totalPengeluaran.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        formatRupiah(totalPengeluaran),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ],
                   ),
@@ -582,30 +418,23 @@ class DashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 32),
 
           // judul riwayat
           const Text(
             "Transaksi Terakhir",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 16),
 
           // daftar transaksi
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: daftarTransaksi.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(height: 12),
+            itemCount: widget.daftarTransaksi.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final trx = daftarTransaksi[index];
-
+              final trx = widget.daftarTransaksi[index];
               return BrutalistCard(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -614,10 +443,9 @@ class DashboardScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     BrutalistCard(
-                      backgroundColor:
-                          trx.tipe == 'Pemasukan'
-                              ? const Color(0xFFB5E48C)
-                              : const Color(0xFFFF9E9E),
+                      backgroundColor: trx.tipe == 'Pemasukan'
+                          ? const Color(0xFFB5E48C)
+                          : const Color(0xFFFF9E9E),
                       padding: const EdgeInsets.all(8),
                       child: Icon(
                         trx.tipe == 'Pemasukan'
@@ -628,8 +456,7 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             trx.judul,
@@ -639,7 +466,7 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${trx.tipe} • ${trx.kategori}',
+                            trx.tipe,
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -649,7 +476,7 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      "Rp ${trx.nominal.toStringAsFixed(0)}",
+                      formatRupiah(trx.nominal),
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
@@ -670,14 +497,10 @@ class DashboardScreen extends StatelessWidget {
 class TransaksiScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
 
-  const TransaksiScreen({
-    super.key,
-    required this.daftarTransaksi,
-  });
+  const TransaksiScreen({super.key, required this.daftarTransaksi});
 
   @override
-  State<TransaksiScreen> createState() =>
-      _TransaksiScreenState();
+  State<TransaksiScreen> createState() => _TransaksiScreenState();
 }
 
 class _TransaksiScreenState extends State<TransaksiScreen> {
@@ -707,15 +530,12 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
             ),
           ),
         ),
-
         const SizedBox(height: 20),
 
         // baris filter
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               _buildFilterButton('Semua'),
@@ -726,30 +546,22 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
             ],
           ),
         ),
-
         const SizedBox(height: 20),
 
         // daftar transaksi
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: dataTampil.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(height: 16),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final trx = dataTampil[index];
 
+              // gesture detector
               return GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Detail: ${trx.judul}',
-                      ),
-                    ),
+                    SnackBar(content: Text('Detail: ${trx.judul}')),
                   );
                 },
                 child: BrutalistCard(
@@ -760,10 +572,9 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
                   child: Row(
                     children: [
                       BrutalistCard(
-                        backgroundColor:
-                            trx.tipe == 'Pemasukan'
-                                ? const Color(0xFFB5E48C)
-                                : const Color(0xFFFF9E9E),
+                        backgroundColor: trx.tipe == 'Pemasukan'
+                            ? const Color(0xFFB5E48C)
+                            : const Color(0xFFFF9E9E),
                         padding: const EdgeInsets.all(12),
                         child: Icon(
                           trx.tipe == 'Pemasukan'
@@ -774,8 +585,7 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               trx.judul,
@@ -786,18 +596,10 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${trx.tanggal.day}/${trx.tanggal.month}/${trx.tanggal.year}',
+                              "${trx.tanggal.day}/${trx.tanggal.month}/${trx.tanggal.year}",
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              trx.kategori,
-                              style: const TextStyle(
-                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -805,7 +607,7 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
                         ),
                       ),
                       Text(
-                        "Rp ${trx.nominal.toStringAsFixed(0)}",
+                        formatRupiah(trx.nominal),
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
@@ -833,18 +635,9 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
         });
       },
       child: BrutalistCard(
-        backgroundColor:
-            isAktif ? const Color(0xFFFFD166) : Colors.white,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 12,
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        backgroundColor: isAktif ? const Color(0xFFFFD166) : Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -893,34 +686,29 @@ class BudgetScreen extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 20),
 
         // daftar budget
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: daftarBudget.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(height: 16),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final budget = daftarBudget[index];
-
-              final double rasio =
-                  (budget['terpakai'] / budget['total'])
-                      .clamp(0.0, 1.0);
+              // perhitungan rasio
+              final double rasio = (budget['terpakai'] / budget['total']).clamp(
+                0.0,
+                1.0,
+              );
 
               return BrutalistCard(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // info teks
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           budget['kategori'],
@@ -930,7 +718,7 @@ class BudgetScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "Rp ${budget['terpakai']} / Rp ${budget['total']}",
+                          '${formatRupiah(budget['terpakai'])} / ${formatRupiah(budget['total'])}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -938,29 +726,28 @@ class BudgetScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
 
+                    // progress bar custom
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final double maxWidth =
-                            constraints.maxWidth;
-
+                        final double maxWidth = constraints.maxWidth;
                         return Stack(
                           children: [
+                            // background bar
                             Container(
                               height: 24,
                               width: maxWidth,
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade200,
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: Colors.black,
                                   width: 2,
                                 ),
                               ),
                             ),
+                            // foreground bar
                             Positioned(
                               top: 0,
                               left: 0,
@@ -969,8 +756,7 @@ class BudgetScreen extends StatelessWidget {
                                 width: maxWidth * rasio,
                                 decoration: BoxDecoration(
                                   color: budget['warna'],
-                                  borderRadius:
-                                      BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Colors.black,
                                     width: 2,
@@ -1024,57 +810,42 @@ class LaporanScreen extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 32),
 
         // card grafik
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: BrutalistCard(
             height: 300,
             child: Column(
               children: [
                 const Text(
                   "Pengeluaran 6 Bulan Terakhir",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
 
                 const Spacer(),
-
                 Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.end,
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: dataGrafik.map((data) {
                     return Column(
-                      mainAxisAlignment:
-                          MainAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // batang grafik
                         Container(
                           width: 32,
-                          height:
-                              (180 * data['nilai']).toDouble(),
+                          height: (180 * data['nilai']).toDouble(),
                           decoration: BoxDecoration(
                             color: const Color(0xFFB5E48C),
-                            border: Border.all(
-                              color: Colors.black,
-                              width: 2,
-                            ),
-                            borderRadius:
-                                const BorderRadius.vertical(
+                            border: Border.all(color: Colors.black, width: 2),
+                            borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(4),
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 12),
-
+                        // label bulan
                         Text(
                           data['bulan'],
                           style: const TextStyle(
