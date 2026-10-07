@@ -4,15 +4,30 @@ void main() {
   runApp(const DompetPintarApp());
 }
 
-// ======================================================
-// MODEL TRANSAKSI
-// ======================================================
+// main app
+class DompetPintarApp extends StatelessWidget {
+  const DompetPintarApp({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Dompet Pintar',
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFFAF9F6),
+        fontFamily: 'Roboto',
+      ),
+      home: const MainScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+// model transaksi
 class Transaksi {
   final String id;
   final String judul;
   final double nominal;
-  final String tipe; // pemasukan / pengeluaran
+  final String tipe;
   final String kategori;
   final DateTime tanggal;
 
@@ -26,47 +41,48 @@ class Transaksi {
   });
 }
 
-// ======================================================
-// MODEL BUDGET
-// ======================================================
+// widget brutalist card
+class BrutalistCard extends StatelessWidget {
+  final Widget child;
+  final Color backgroundColor;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry padding;
 
-class Budget {
-  String kategori;
-  double jumlah;
-
-  Budget({
-    required this.kategori,
-    required this.jumlah,
+  const BrutalistCard({
+    super.key,
+    required this.child,
+    this.backgroundColor = Colors.white,
+    this.width,
+    this.height,
+    this.padding = const EdgeInsets.all(16),
   });
-}
-
-// ======================================================
-// APP
-// ======================================================
-
-class DompetPintarApp extends StatelessWidget {
-  const DompetPintarApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'DompetPintar',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-        ),
-        useMaterial3: true,
+    return Container(
+      width: width,
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0,
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      home: const MainScreen(),
+      child: child,
     );
   }
 }
 
-// ======================================================
-// MAIN SCREEN
-// ======================================================
-
+// main screen
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -75,178 +91,65 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  // state
   int _selectedIndex = 0;
 
+  // data transaksi
   final List<Transaksi> _daftarTransaksi = [
     Transaksi(
       id: '1',
-      judul: 'Uang Bulanan',
-      nominal: 3000000,
-      tipe: 'pemasukan',
-      kategori: 'Gaji',
+      judul: 'Gaji Bulanan',
+      nominal: 5000000,
+      tipe: 'Pemasukan',
+      kategori: 'Lainnya',
       tanggal: DateTime.now(),
     ),
     Transaksi(
       id: '2',
       judul: 'Makan Siang',
-      nominal: 25000,
-      tipe: 'pengeluaran',
+      nominal: 50000,
+      tipe: 'Pengeluaran',
       kategori: 'Makanan',
       tanggal: DateTime.now(),
     ),
     Transaksi(
       id: '3',
-      judul: 'Transportasi',
-      nominal: 20000,
-      tipe: 'pengeluaran',
-      kategori: 'Transportasi',
+      judul: 'Beli Kuota',
+      nominal: 100000,
+      tipe: 'Pengeluaran',
+      kategori: 'Lainnya',
       tanggal: DateTime.now(),
     ),
   ];
 
-  final List<Budget> _daftarBudget = [
-    Budget(
-      kategori: 'Makanan',
-      jumlah: 1000000,
-    ),
-    Budget(
-      kategori: 'Transportasi',
-      jumlah: 500000,
-    ),
-    Budget(
-      kategori: 'Hiburan',
-      jumlah: 300000,
-    ),
-  ];
-
-  void _tambahTransaksi(Transaksi transaksi) {
+  // navigasi fungsi
+  void _onItemTapped(int index) {
     setState(() {
-      _daftarTransaksi.insert(0, transaksi);
+      _selectedIndex = index;
     });
   }
 
-  void _tambahAtauUpdateBudget(Budget budget) {
-    setState(() {
-      final index = _daftarBudget.indexWhere(
-        (item) => item.kategori == budget.kategori,
-      );
+  // fungsi tambah transaksi
+  void _tambahTransaksi() {
+    final TextEditingController judulController = TextEditingController();
+    final TextEditingController nominalController = TextEditingController();
 
-      if (index >= 0) {
-        _daftarBudget[index] = budget;
-      } else {
-        _daftarBudget.add(budget);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> halaman = [
-      DashboardScreen(
-        daftarTransaksi: _daftarTransaksi,
-      ),
-      TransaksiScreen(
-        daftarTransaksi: _daftarTransaksi,
-      ),
-      BudgetScreen(
-        daftarBudget: _daftarBudget,
-        daftarTransaksi: _daftarTransaksi,
-        onBudgetChanged: _tambahAtauUpdateBudget,
-      ),
-      LaporanScreen(
-        daftarTransaksi: _daftarTransaksi,
-      ),
-    ];
-
-    return Scaffold(
-      body: halaman[_selectedIndex],
-
-      floatingActionButton: _selectedIndex == 1
-          ? FloatingActionButton(
-              onPressed: () {
-                _showTambahTransaksi(context);
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
-
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Transaksi',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Budget',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Laporan',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ====================================================
-  // DIALOG TAMBAH TRANSAKSI
-  // ====================================================
-
-  void _showTambahTransaksi(BuildContext context) {
-    final judulController = TextEditingController();
-    final nominalController = TextEditingController();
-
-    String tipe = 'pengeluaran';
-    String kategori = 'Makanan';
-    DateTime tanggal = DateTime.now();
-
-    final List<String> kategoriPengeluaran = [
-      'Makanan',
-      'Transportasi',
-      'Hiburan',
-      'Belanja',
-      'Tagihan',
-      'Lainnya',
-    ];
-
-    final List<String> kategoriPemasukan = [
-      'Gaji',
-      'Bonus',
-      'Uang Saku',
-      'Investasi',
-      'Lainnya',
-    ];
+    String tipeDipilih = 'Pengeluaran';
+    String kategoriDipilih = 'Makanan';
+    DateTime tanggalDipilih = DateTime.now();
 
     showDialog(
       context: context,
-      builder: (dialogContext) {
+      builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final kategoriList = tipe == 'pengeluaran'
-                ? kategoriPengeluaran
-                : kategoriPemasukan;
-
-            if (!kategoriList.contains(kategori)) {
-              kategori = kategoriList.first;
-            }
-
             return AlertDialog(
-              title: const Text('Tambah Transaksi'),
+              title: const Text(
+                'Tambah Transaksi',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -254,12 +157,12 @@ class _MainScreenState extends State<MainScreen> {
                     TextField(
                       controller: judulController,
                       decoration: const InputDecoration(
-                        labelText: 'Nama transaksi',
+                        labelText: 'Nama Transaksi',
                         border: OutlineInputBorder(),
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     TextField(
                       controller: nominalController,
@@ -271,82 +174,99 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: tipe,
+                      initialValue: tipeDipilih,
                       decoration: const InputDecoration(
-                        labelText: 'Tipe',
+                        labelText: 'Tipe Transaksi',
                         border: OutlineInputBorder(),
                       ),
                       items: const [
                         DropdownMenuItem(
-                          value: 'pemasukan',
+                          value: 'Pemasukan',
                           child: Text('Pemasukan'),
                         ),
                         DropdownMenuItem(
-                          value: 'pengeluaran',
+                          value: 'Pengeluaran',
                           child: Text('Pengeluaran'),
                         ),
                       ],
                       onChanged: (value) {
-                        if (value == null) return;
-
                         setDialogState(() {
-                          tipe = value;
-                          kategori = value == 'pengeluaran'
-                              ? kategoriPengeluaran.first
-                              : kategoriPemasukan.first;
+                          tipeDipilih = value!;
                         });
                       },
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: kategori,
+                      initialValue: kategoriDipilih,
                       decoration: const InputDecoration(
                         labelText: 'Kategori',
                         border: OutlineInputBorder(),
                       ),
-                      items: kategoriList.map((item) {
-                        return DropdownMenuItem(
-                          value: item,
-                          child: Text(item),
-                        );
-                      }).toList(),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Makanan',
+                          child: Text('Makanan'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Transportasi',
+                          child: Text('Transportasi'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Hiburan',
+                          child: Text('Hiburan'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Belanja',
+                          child: Text('Belanja'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Lainnya',
+                          child: Text('Lainnya'),
+                        ),
+                      ],
                       onChanged: (value) {
-                        if (value == null) return;
-
                         setDialogState(() {
-                          kategori = value;
+                          kategoriDipilih = value!;
                         });
                       },
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.calendar_today),
-                      title: const Text('Tanggal'),
-                      subtitle: Text(
-                        '${tanggal.day}/${tanggal.month}/${tanggal.year}',
-                      ),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: tanggal,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${tanggalDipilih.day}/${tanggalDipilih.month}/${tanggalDipilih.year}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final DateTime? tanggalBaru =
+                                await showDatePicker(
+                              context: context,
+                              initialDate: tanggalDipilih,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
 
-                        if (picked != null) {
-                          setDialogState(() {
-                            tanggal = picked;
-                          });
-                        }
-                      },
+                            if (tanggalBaru != null) {
+                              setDialogState(() {
+                                tanggalDipilih = tanggalBaru;
+                              });
+                            }
+                          },
+                          child: const Text('Pilih Tanggal'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -354,45 +274,64 @@ class _MainScreenState extends State<MainScreen> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(dialogContext);
+                    Navigator.pop(context);
                   },
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final nominal = double.tryParse(
-                      nominalController.text.replaceAll('.', ''),
-                    );
-
-                    if (judulController.text.trim().isEmpty ||
-                        nominal == null ||
-                        nominal <= 0) {
+                    if (judulController.text.isEmpty ||
+                        nominalController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Nama dan nominal harus diisi dengan benar.',
+                            'Nama dan nominal harus diisi.',
                           ),
                         ),
                       );
                       return;
                     }
 
-                    final transaksi = Transaksi(
-                      id: DateTime.now()
-                          .millisecondsSinceEpoch
-                          .toString(),
-                      judul: judulController.text.trim(),
-                      nominal: nominal,
-                      tipe: tipe,
-                      kategori: kategori,
-                      tanggal: tanggal,
+                    final double? nominal =
+                        double.tryParse(nominalController.text);
+
+                    if (nominal == null || nominal <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Nominal harus berupa angka.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    setState(() {
+                      _daftarTransaksi.add(
+                        Transaksi(
+                          id: DateTime.now()
+                              .millisecondsSinceEpoch
+                              .toString(),
+                          judul: judulController.text,
+                          nominal: nominal,
+                          tipe: tipeDipilih,
+                          kategori: kategoriDipilih,
+                          tanggal: tanggalDipilih,
+                        ),
+                      );
+                    });
+
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Transaksi berhasil ditambahkan.',
+                        ),
+                      ),
                     );
-
-                    _tambahTransaksi(transaksi);
-
-                    Navigator.pop(dialogContext);
                   },
-                  child: const Text('Simpan'),
+                  child: const Text('Tambah'),
                 ),
               ],
             );
@@ -401,12 +340,87 @@ class _MainScreenState extends State<MainScreen> {
       },
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    // daftar halaman
+    final List<Widget> _halaman = [
+      DashboardScreen(daftarTransaksi: _daftarTransaksi),
+      TransaksiScreen(daftarTransaksi: _daftarTransaksi),
+      const BudgetScreen(),
+      const LaporanScreen(),
+    ];
+
+    return Scaffold(
+      // body
+      body: SafeArea(
+        child: _halaman[_selectedIndex],
+      ),
+
+      // floating button
+      floatingActionButton: BrutalistCard(
+        backgroundColor: const Color(0xFFFFD166),
+        padding: const EdgeInsets.all(0),
+        width: 60,
+        height: 60,
+        child: IconButton(
+          onPressed: _tambahTransaksi,
+          icon: const Icon(
+            Icons.add,
+            size: 32,
+            color: Colors.black,
+          ),
+        ),
+      ),
+
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerDocked,
+
+      // navigasi bawah
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Colors.black,
+              width: 3,
+            ),
+          ),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: const Color(0xFFFAF9F6),
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt),
+              label: 'Transaksi',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.pie_chart),
+              label: 'Budget',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Laporan',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w900,
+          ),
+          onTap: _onItemTapped,
+        ),
+      ),
+    );
+  }
 }
 
-// ======================================================
-// DASHBOARD
-// ======================================================
-
+// halaman dashboard
 class DashboardScreen extends StatelessWidget {
   final List<Transaksi> daftarTransaksi;
 
@@ -415,190 +429,244 @@ class DashboardScreen extends StatelessWidget {
     required this.daftarTransaksi,
   });
 
-  double get totalPemasukan {
-    return daftarTransaksi
-        .where((item) => item.tipe == 'pemasukan')
-        .fold(0.0, (sum, item) => sum + item.nominal);
-  }
-
-  double get totalPengeluaran {
-    return daftarTransaksi
-        .where((item) => item.tipe == 'pengeluaran')
-        .fold(0.0, (sum, item) => sum + item.nominal);
-  }
-
-  double get saldo {
-    return totalPemasukan - totalPengeluaran;
-  }
-
-  String formatRupiah(double angka) {
-    return 'Rp ${angka.toStringAsFixed(0)}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'DompetPintar',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // SALDO
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Saldo Saat Ini',
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      formatRupiah(saldo),
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+    // Menghitung total statis
+    double totalSaldo = 15000000;
+    double totalPemasukan = 5000000;
+    double totalPengeluaran = 150000;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // app bar custom
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const BrutalistCard(
+                backgroundColor: Color(0xFFFFD166),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // PEMASUKAN & PENGELUARAN
-            Row(
-              children: [
-                Expanded(
-                  child: _infoCard(
-                    context,
-                    'Pemasukan',
-                    totalPemasukan,
-                    Icons.arrow_downward,
-                    Colors.green,
+                child: Text(
+                  "DompetPintar",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _infoCard(
-                    context,
-                    'Pengeluaran',
-                    totalPengeluaran,
-                    Icons.arrow_upward,
-                    Colors.red,
+              ),
+              Row(
+                children: const [
+                  BrutalistCard(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.settings,
+                      size: 24,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  BrutalistCard(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.search,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // header saldo
+          const Text(
+            "Saldo Anda.\nKelola sekarang.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // card saldo utama
+          BrutalistCard(
+            backgroundColor: Colors.white,
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "TOTAL SALDO",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Rp ${totalSaldo.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
             ),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            const Text(
-              'Transaksi Terbaru',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            if (daftarTransaksi.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(30),
-                  child: Text('Belum ada transaksi.'),
-                ),
-              )
-            else
-              ...daftarTransaksi.take(5).map(
-                (transaksi) {
-                  final isIncome =
-                      transaksi.tipe == 'pemasukan';
-
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Icon(
-                          isIncome
-                              ? Icons.arrow_downward
-                              : Icons.arrow_upward,
-                        ),
+          // ringkasan pemasukan & pengeluaran
+          Row(
+            children: [
+              Expanded(
+                child: BrutalistCard(
+                  backgroundColor: const Color(0xFFB5E48C),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.arrow_downward,
+                        size: 28,
                       ),
-                      title: Text(transaksi.judul),
-                      subtitle: Text(
-                        '${transaksi.kategori} • ${transaksi.tanggal.day}/${transaksi.tanggal.month}/${transaksi.tanggal.year}',
-                      ),
-                      trailing: Text(
-                        '${isIncome ? '+' : '-'} ${formatRupiah(transaksi.nominal)}',
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Pemasukan",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: isIncome
-                              ? Colors.green
-                              : Colors.red,
                         ),
                       ),
-                    ),
-                  );
-                },
+                      Text(
+                        "Rp ${totalPemasukan.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
+              const SizedBox(width: 16),
+              Expanded(
+                child: BrutalistCard(
+                  backgroundColor: const Color(0xFFFF9E9E),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.arrow_upward,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Pengeluaran",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "Rp ${totalPengeluaran.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-  Widget _infoCard(
-    BuildContext context,
-    String title,
-    double nominal,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: color,
+          const SizedBox(height: 32),
+
+          // judul riwayat
+          const Text(
+            "Transaksi Terakhir",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 8),
-            Text(title),
-            const SizedBox(height: 4),
-            Text(
-              formatRupiah(nominal),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // daftar transaksi
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: daftarTransaksi.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final trx = daftarTransaksi[index];
+
+              return BrutalistCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    BrutalistCard(
+                      backgroundColor:
+                          trx.tipe == 'Pemasukan'
+                              ? const Color(0xFFB5E48C)
+                              : const Color(0xFFFF9E9E),
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        trx.tipe == 'Pemasukan'
+                            ? Icons.attach_money
+                            : Icons.money_off,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            trx.judul,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${trx.tipe} • ${trx.kategori}',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      "Rp ${trx.nominal.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-// ======================================================
-// TRANSAKSI SCREEN
-// ======================================================
-
+// halaman transaksi
 class TransaksiScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
 
@@ -613,601 +681,415 @@ class TransaksiScreen extends StatefulWidget {
 }
 
 class _TransaksiScreenState extends State<TransaksiScreen> {
-  String filter = 'Semua';
-
-  String formatRupiah(double angka) {
-    return 'Rp ${angka.toStringAsFixed(0)}';
-  }
+  // state filter lokal
+  String _filterAktif = 'Semua';
 
   @override
   Widget build(BuildContext context) {
-    List<Transaksi> transaksi = widget.daftarTransaksi;
-
-    if (filter == 'Pemasukan') {
-      transaksi = transaksi
-          .where((item) => item.tipe == 'pemasukan')
-          .toList();
-    } else if (filter == 'Pengeluaran') {
-      transaksi = transaksi
-          .where((item) => item.tipe == 'pengeluaran')
-          .toList();
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transaksi'),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'Semua',
-                  label: Text('Semua'),
-                ),
-                ButtonSegment(
-                  value: 'Pemasukan',
-                  label: Text('Masuk'),
-                ),
-                ButtonSegment(
-                  value: 'Pengeluaran',
-                  label: Text('Keluar'),
-                ),
-              ],
-              selected: {filter},
-              onSelectionChanged: (value) {
-                setState(() {
-                  filter = value.first;
-                });
-              },
-            ),
-          ),
-
-          Expanded(
-            child: transaksi.isEmpty
-                ? const Center(
-                    child: Text('Belum ada transaksi.'),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
-                    itemCount: transaksi.length,
-                    itemBuilder: (context, index) {
-                      final item = transaksi[index];
-                      final isIncome =
-                          item.tipe == 'pemasukan';
-
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Icon(
-                              isIncome
-                                  ? Icons.arrow_downward
-                                  : Icons.arrow_upward,
-                            ),
-                          ),
-                          title: Text(item.judul),
-                          subtitle: Text(
-                            '${item.kategori} • ${item.tanggal.day}/${item.tanggal.month}/${item.tanggal.year}',
-                          ),
-                          trailing: Text(
-                            '${isIncome ? '+' : '-'} ${formatRupiah(item.nominal)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isIncome
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ======================================================
-// BUDGET SCREEN
-// ======================================================
-
-class BudgetScreen extends StatefulWidget {
-  final List<Budget> daftarBudget;
-  final List<Transaksi> daftarTransaksi;
-  final Function(Budget) onBudgetChanged;
-
-  const BudgetScreen({
-    super.key,
-    required this.daftarBudget,
-    required this.daftarTransaksi,
-    required this.onBudgetChanged,
-  });
-
-  @override
-  State<BudgetScreen> createState() => _BudgetScreenState();
-}
-
-class _BudgetScreenState extends State<BudgetScreen> {
-  double pengeluaranKategori(String kategori) {
-    return widget.daftarTransaksi
-        .where(
-          (item) =>
-              item.tipe == 'pengeluaran' &&
-              item.kategori == kategori,
-        )
-        .fold(
-          0.0,
-          (sum, item) => sum + item.nominal,
-        );
-  }
-
-  String formatRupiah(double angka) {
-    return 'Rp ${angka.toStringAsFixed(0)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Budget'),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showBudgetDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: widget.daftarBudget.isEmpty
-          ? const Center(
-              child: Text('Belum ada budget.'),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.daftarBudget.length,
-              itemBuilder: (context, index) {
-                final budget = widget.daftarBudget[index];
-
-                final terpakai =
-                    pengeluaranKategori(budget.kategori);
-
-                // DIPAKSA DOUBLE AGAR TIDAK ERROR NUM
-                final double rasio = budget.jumlah <= 0
-                    ? 0.0
-                    : (terpakai / budget.jumlah)
-                        .toDouble();
-
-                final double progress =
-                    rasio.clamp(0.0, 1.0).toDouble();
-
-                final bool melebihi =
-                    terpakai > budget.jumlah;
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              budget.kategori,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                _showBudgetDialog(
-                                  context,
-                                  budgetLama: budget,
-                                );
-                              },
-                              icon: const Icon(Icons.edit),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          '${formatRupiah(terpakai)} / ${formatRupiah(budget.jumlah)}',
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 10,
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          melebihi
-                              ? 'Budget terlampaui!'
-                              : '${(rasio * 100).toStringAsFixed(0)}% digunakan',
-                          style: TextStyle(
-                            color: melebihi
-                                ? Colors.red
-                                : Colors.grey[700],
-                            fontWeight: melebihi
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  void _showBudgetDialog(
-    BuildContext context, {
-    Budget? budgetLama,
-  }) {
-    final nominalController = TextEditingController(
-      text: budgetLama?.jumlah.toStringAsFixed(0) ?? '',
-    );
-
-    String kategori = budgetLama?.kategori ?? 'Makanan';
-
-    final kategoriList = [
-      'Makanan',
-      'Transportasi',
-      'Hiburan',
-      'Belanja',
-      'Tagihan',
-      'Lainnya',
-    ];
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                budgetLama == null
-                    ? 'Tambah Budget'
-                    : 'Edit Budget',
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: kategori,
-                    decoration: const InputDecoration(
-                      labelText: 'Kategori',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: kategoriList.map((item) {
-                      return DropdownMenuItem(
-                        value: item,
-                        child: Text(item),
-                      );
-                    }).toList(),
-                    onChanged: budgetLama != null
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-
-                            setDialogState(() {
-                              kategori = value;
-                            });
-                          },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: nominalController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Batas Budget',
-                      prefixText: 'Rp ',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final jumlah = double.tryParse(
-                      nominalController.text.replaceAll('.', ''),
-                    );
-
-                    if (jumlah == null || jumlah <= 0) {
-                      return;
-                    }
-
-                    widget.onBudgetChanged(
-                      Budget(
-                        kategori: kategori,
-                        jumlah: jumlah,
-                      ),
-                    );
-
-                    setState(() {});
-
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Simpan'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-// ======================================================
-// LAPORAN SCREEN
-// ======================================================
-
-class LaporanScreen extends StatelessWidget {
-  final List<Transaksi> daftarTransaksi;
-
-  const LaporanScreen({
-    super.key,
-    required this.daftarTransaksi,
-  });
-
-  String formatRupiah(double angka) {
-    return 'Rp ${angka.toStringAsFixed(0)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-
-    final transaksiBulanIni = daftarTransaksi.where((item) {
-      return item.tanggal.year == now.year &&
-          item.tanggal.month == now.month;
+    // logika filter data
+    final dataTampil = widget.daftarTransaksi.where((trx) {
+      if (_filterAktif == 'Semua') return true;
+      return trx.tipe == _filterAktif;
     }).toList();
 
-    final double pemasukan = transaksiBulanIni
-        .where((item) => item.tipe == 'pemasukan')
-        .fold(
-          0.0,
-          (sum, item) => sum + item.nominal,
-        );
-
-    final double pengeluaran = transaksiBulanIni
-        .where((item) => item.tipe == 'pengeluaran')
-        .fold(
-          0.0,
-          (sum, item) => sum + item.nominal,
-        );
-
-    final double saldo = pemasukan - pengeluaran;
-
-    final double maxValue = pemasukan > pengeluaran
-        ? pemasukan
-        : pengeluaran;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Laporan Keuangan'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Laporan Bulan ${now.month}/${now.year}',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Riwayat.\nCek uangmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
             ),
+          ),
+        ),
 
-            const SizedBox(height: 16),
+        const SizedBox(height: 20),
 
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _summaryRow(
-                      'Total Pemasukan',
-                      pemasukan,
-                      Colors.green,
-                    ),
-                    const Divider(),
-                    _summaryRow(
-                      'Total Pengeluaran',
-                      pengeluaran,
-                      Colors.red,
-                    ),
-                    const Divider(),
-                    _summaryRow(
-                      'Saldo',
-                      saldo,
-                      Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
+        // baris filter
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+          ),
+          child: Row(
+            children: [
+              _buildFilterButton('Semua'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Pemasukan'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Pengeluaran'),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // daftar transaksi
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 10,
             ),
+            itemCount: dataTampil.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final trx = dataTampil[index];
 
-            const SizedBox(height: 24),
-
-            const Text(
-              'Grafik Pemasukan & Pengeluaran',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: SizedBox(
-                  height: 260,
-                  child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.end,
-                    children: [
-                      _buildBar(
-                        'Pemasukan',
-                        pemasukan,
-                        maxValue,
-                        Colors.green,
-                      ),
-                      _buildBar(
-                        'Pengeluaran',
-                        pengeluaran,
-                        maxValue,
-                        Colors.red,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'Detail Transaksi Bulan Ini',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            if (transaksiBulanIni.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(
-                    child: Text(
-                      'Belum ada transaksi bulan ini.',
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...transaksiBulanIni.map(
-                (item) {
-                  final isIncome =
-                      item.tipe == 'pemasukan';
-
-                  return Card(
-                    child: ListTile(
-                      title: Text(item.judul),
-                      subtitle: Text(
-                        '${item.kategori} • ${item.tanggal.day}/${item.tanggal.month}/${item.tanggal.year}',
-                      ),
-                      trailing: Text(
-                        '${isIncome ? '+' : '-'} ${formatRupiah(item.nominal)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isIncome
-                              ? Colors.green
-                              : Colors.red,
-                        ),
+              return GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Detail: ${trx.judul}',
                       ),
                     ),
                   );
                 },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _summaryRow(
-    String title,
-    double value,
-    Color color,
-  ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title),
-        Text(
-          formatRupiah(value),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: color,
+                child: BrutalistCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      BrutalistCard(
+                        backgroundColor:
+                            trx.tipe == 'Pemasukan'
+                                ? const Color(0xFFB5E48C)
+                                : const Color(0xFFFF9E9E),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          trx.tipe == 'Pemasukan'
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              trx.judul,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${trx.tanggal.day}/${trx.tanggal.month}/${trx.tanggal.year}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              trx.kategori,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        "Rp ${trx.nominal.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBar(
-    String label,
-    double value,
-    double maxValue,
-    Color color,
-  ) {
-    // Semua dibuat DOUBLE agar aman dari error num -> double
-    final double tinggi = maxValue <= 0
-        ? 0.0
-        : ((value / maxValue) * 170).toDouble();
+  // widget filter button
+  Widget _buildFilterButton(String label) {
+    final bool isAktif = _filterAktif == label;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(
-          formatRupiah(value),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filterAktif = label;
+        });
+      },
+      child: BrutalistCard(
+        backgroundColor:
+            isAktif ? const Color(0xFFFFD166) : Colors.white,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 12,
+        ),
+        child: Text(
+          label,
           style: const TextStyle(
-            fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
         ),
+      ),
+    );
+  }
+}
 
-        const SizedBox(height: 8),
+// halaman budget
+class BudgetScreen extends StatelessWidget {
+  const BudgetScreen({super.key});
 
-        Container(
-          width: 70,
-          height: tinggi,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(8),
+  @override
+  Widget build(BuildContext context) {
+    // data dummy
+    final List<Map<String, dynamic>> daftarBudget = [
+      {
+        'kategori': 'Makanan',
+        'terpakai': 1500000,
+        'total': 2000000,
+        'warna': const Color(0xFFB5E48C),
+      },
+      {
+        'kategori': 'Transportasi',
+        'terpakai': 850000,
+        'total': 750000,
+        'warna': const Color(0xFFFF9E9E),
+      },
+      {
+        'kategori': 'Hiburan',
+        'terpakai': 300000,
+        'total': 1000000,
+        'warna': const Color(0xFFFFD166),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Anggaran.\nKendalikan uangmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
             ),
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
 
-        Text(label),
+        // daftar budget
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 10,
+            ),
+            itemCount: daftarBudget.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final budget = daftarBudget[index];
+
+              final double rasio =
+                  (budget['terpakai'] / budget['total'])
+                      .clamp(0.0, 1.0);
+
+              return BrutalistCard(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          budget['kategori'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          "Rp ${budget['terpakai']} / Rp ${budget['total']}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double maxWidth =
+                            constraints.maxWidth;
+
+                        return Stack(
+                          children: [
+                            Container(
+                              height: 24,
+                              width: maxWidth,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius:
+                                    BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              child: Container(
+                                height: 24,
+                                width: maxWidth * rasio,
+                                decoration: BoxDecoration(
+                                  color: budget['warna'],
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// halaman laporan
+class LaporanScreen extends StatelessWidget {
+  const LaporanScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // data grafik statis
+    final List<Map<String, dynamic>> dataGrafik = [
+      {'bulan': 'Jan', 'nilai': 0.4},
+      {'bulan': 'Feb', 'nilai': 0.7},
+      {'bulan': 'Mar', 'nilai': 0.5},
+      {'bulan': 'Apr', 'nilai': 0.9},
+      {'bulan': 'Mei', 'nilai': 0.6},
+      {'bulan': 'Jun', 'nilai': 0.8},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Text(
+            "Laporan.\nAnalisis finansialmu.",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 32),
+
+        // card grafik
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+          ),
+          child: BrutalistCard(
+            height: 300,
+            child: Column(
+              children: [
+                const Text(
+                  "Pengeluaran 6 Bulan Terakhir",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+
+                const Spacer(),
+
+                Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.end,
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceEvenly,
+                  children: dataGrafik.map((data) {
+                    return Column(
+                      mainAxisAlignment:
+                          MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 32,
+                          height:
+                              (180 * data['nilai']).toDouble(),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB5E48C),
+                            border: Border.all(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                            borderRadius:
+                                const BorderRadius.vertical(
+                              top: Radius.circular(4),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Text(
+                          data['bulan'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
