@@ -89,6 +89,41 @@ class BrutalistCard extends StatelessWidget {
   }
 }
 
+class AppHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const AppHeader({super.key, required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 36,
+            fontWeight: FontWeight.w900,
+            height: 1.1,
+          ),
+          children: [
+            TextSpan(text: '$title\n'),
+            TextSpan(
+              text: subtitle,
+              style: const TextStyle(
+                color: Color(0xFF606060),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // main screen
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -133,12 +168,216 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _tampilkanDetailTransaksi(Transaksi transaksi) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Detail Transaksi',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Judul', transaksi.judul),
+              const SizedBox(height: 12),
+              _buildDetailRow('Tipe', transaksi.tipe),
+              const SizedBox(height: 12),
+              _buildDetailRow('Nominal', formatRupiah(transaksi.nominal)),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                'Tanggal',
+                '${transaksi.tanggal.day}/${transaksi.tanggal.month}/${transaksi.tanggal.year}',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
+    );
+  }
+
+  void _tambahTransaksi() {
+    final judulController = TextEditingController();
+    final nominalController = TextEditingController();
+    String tipeTransaksi = 'Pengeluaran';
+    DateTime tanggalTransaksi = DateTime.now();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Tambah Transaksi',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      key: const ValueKey('judul'),
+                      controller: judulController,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul transaksi',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      key: const ValueKey('nominal'),
+                      controller: nominalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Nominal',
+                        prefixText: 'Rp. ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      key: const ValueKey('tipe'),
+                      value: tipeTransaksi,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipe transaksi',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Pemasukan',
+                          child: Text('Pemasukan'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Pengeluaran',
+                          child: Text('Pengeluaran'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() => tipeTransaksi = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Tanggal: ${tanggalTransaksi.day}/${tanggalTransaksi.month}/${tanggalTransaksi.year}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final tanggalDipilih = await showDatePicker(
+                              context: context,
+                              initialDate: tanggalTransaksi,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+
+                            if (tanggalDipilih != null) {
+                              setDialogState(() {
+                                tanggalTransaksi = tanggalDipilih;
+                              });
+                            }
+                          },
+                          child: const Text('Pilih tanggal'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final judul = judulController.text.trim();
+                    final nominal = double.tryParse(nominalController.text);
+
+                    if (judul.isEmpty || nominal == null || nominal <= 0) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Judul dan nominal transaksi harus valid.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    setState(() {
+                      _daftarTransaksi.insert(
+                        0,
+                        Transaksi(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          judul: judul,
+                          nominal: nominal,
+                          tipe: tipeTransaksi,
+                          tanggal: tanggalTransaksi,
+                        ),
+                      );
+                    });
+
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Transaksi berhasil ditambahkan.'),
+                      ),
+                    );
+                  },
+                  child: const Text('Tambah'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // daftar halaman
     final List<Widget> halaman = [
-      DashboardScreen(daftarTransaksi: _daftarTransaksi),
-      TransaksiScreen(daftarTransaksi: _daftarTransaksi),
+      DashboardScreen(
+        daftarTransaksi: _daftarTransaksi,
+        onDetailTransaksi: _tampilkanDetailTransaksi,
+      ),
+      TransaksiScreen(
+        daftarTransaksi: _daftarTransaksi,
+        onDetailTransaksi: _tampilkanDetailTransaksi,
+      ),
       const BudgetScreen(),
       const LaporanScreen(),
     ];
@@ -153,11 +392,7 @@ class _MainScreenState extends State<MainScreen> {
         width: 60,
         height: 60,
         child: IconButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Form Tambah Transaksi')),
-            );
-          },
+          onPressed: _tambahTransaksi,
           icon: const Icon(Icons.add, size: 32, color: Colors.black),
         ),
       ),
@@ -199,8 +434,13 @@ class _MainScreenState extends State<MainScreen> {
 // halaman dashboard
 class DashboardScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
+  final void Function(Transaksi transaksi) onDetailTransaksi;
 
-  const DashboardScreen({super.key, required this.daftarTransaksi});
+  const DashboardScreen({
+    super.key,
+    required this.daftarTransaksi,
+    required this.onDetailTransaksi,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -208,6 +448,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isSearchExpanded = false;
+  bool _isSaldoVisible = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -216,6 +457,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _toggleSaldoVisibility() {
+    setState(() {
+      _isSaldoVisible = !_isSaldoVisible;
+    });
   }
 
   void _toggleSearch() {
@@ -322,27 +569,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 28),
 
           // header saldo
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-                height: 1.1,
-              ),
-              children: [
-                TextSpan(text: 'Saldo Anda.\n'),
-                TextSpan(
-                  text: 'Kelola sekarang',
-                  style: TextStyle(
-                    color: Color(0xFF606060),
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const AppHeader(title: 'Saldo Anda.', subtitle: 'Kelola sekarang'),
           const SizedBox(height: 24),
 
           // card saldo utama
@@ -360,11 +587,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  formatRupiah(totalSaldo),
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
+                GestureDetector(
+                  key: const ValueKey('saldo-kolom'),
+                  behavior: HitTestBehavior.opaque,
+                  onLongPress: _toggleSaldoVisibility,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _isSaldoVisible ? formatRupiah(totalSaldo) : '****',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        key: const ValueKey('toggle-saldo'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _toggleSaldoVisibility,
+                        child: Icon(
+                          _isSaldoVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          size: 28,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -435,54 +687,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final trx = widget.daftarTransaksi[index];
-              return BrutalistCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    BrutalistCard(
-                      backgroundColor: trx.tipe == 'Pemasukan'
-                          ? const Color(0xFFB5E48C)
-                          : const Color(0xFFFF9E9E),
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        trx.tipe == 'Pemasukan'
-                            ? Icons.attach_money
-                            : Icons.money_off,
+              return GestureDetector(
+                key: ValueKey('transaksi-${trx.id}'),
+                behavior: HitTestBehavior.opaque,
+                onDoubleTap: () => widget.onDetailTransaksi(trx),
+                child: BrutalistCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      BrutalistCard(
+                        backgroundColor: trx.tipe == 'Pemasukan'
+                            ? const Color(0xFFB5E48C)
+                            : const Color(0xFFFF9E9E),
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          trx.tipe == 'Pemasukan'
+                              ? Icons.attach_money
+                              : Icons.money_off,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            trx.judul,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              trx.judul,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          Text(
-                            trx.tipe,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
+                            Text(
+                              trx.tipe,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      formatRupiah(trx.nominal),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
+                      Text(
+                        formatRupiah(trx.nominal),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -496,8 +753,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // halaman transaksi
 class TransaksiScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
+  final void Function(Transaksi transaksi) onDetailTransaksi;
 
-  const TransaksiScreen({super.key, required this.daftarTransaksi});
+  const TransaksiScreen({
+    super.key,
+    required this.daftarTransaksi,
+    required this.onDetailTransaksi,
+  });
 
   @override
   State<TransaksiScreen> createState() => _TransaksiScreenState();
@@ -519,17 +781,7 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // header
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Text(
-            "Riwayat.\nCek uangmu.",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-            ),
-          ),
-        ),
+        const AppHeader(title: 'Riwayat.', subtitle: 'Cek uangmu.'),
         const SizedBox(height: 20),
 
         // baris filter
@@ -559,6 +811,8 @@ class _TransaksiScreenState extends State<TransaksiScreen> {
 
               // gesture detector
               return GestureDetector(
+                key: ValueKey('transaksi-${trx.id}'),
+                onDoubleTap: () => widget.onDetailTransaksi(trx),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Detail: ${trx.judul}')),
@@ -675,17 +929,7 @@ class BudgetScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // header
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Text(
-            "Anggaran.\nKendalikan uangmu.",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-            ),
-          ),
-        ),
+        const AppHeader(title: 'Anggaran.', subtitle: 'Kendalikan uangmu.'),
         const SizedBox(height: 20),
 
         // daftar budget
@@ -799,17 +1043,7 @@ class LaporanScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // header
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Text(
-            "Laporan.\nAnalisis finansialmu.",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-            ),
-          ),
-        ),
+        const AppHeader(title: 'Laporan.', subtitle: 'Analisis finansialmu.'),
         const SizedBox(height: 32),
 
         // card grafik
