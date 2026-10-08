@@ -174,6 +174,4 @@ flutter test
 
 Dikembangkan sebagai proyek UTS Mata Kuliah Mobile Programming
 
-Darren Evan Nathanael
-Ryan Alvino
-I Made Wijaya Kesuma
+Darren Evan Nathanael | Ryan Alvino | I Made Wijaya Kesuma
