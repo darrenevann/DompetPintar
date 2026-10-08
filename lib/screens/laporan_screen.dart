@@ -1,23 +1,42 @@
 import 'package:flutter/material.dart';
 
+import '../models/transaksi.dart';
 import '../widgets/app_header.dart';
 import '../widgets/brutalist_card.dart';
 
 // halaman laporan
 class LaporanScreen extends StatelessWidget {
-  const LaporanScreen({super.key});
+  final List<Transaksi> daftarTransaksi;
+
+  const LaporanScreen({super.key, required this.daftarTransaksi});
 
   @override
   Widget build(BuildContext context) {
-    // data grafik statis
-    final List<Map<String, dynamic>> dataGrafik = [
-      {'bulan': 'Jan', 'nilai': 0.4},
-      {'bulan': 'Feb', 'nilai': 0.7},
-      {'bulan': 'Mar', 'nilai': 0.5},
-      {'bulan': 'Apr', 'nilai': 0.9},
-      {'bulan': 'Mei', 'nilai': 0.6},
-      {'bulan': 'Jun', 'nilai': 0.8},
-    ];
+    final sekarang = DateTime.now();
+    final bulanAwal = DateTime(sekarang.year, sekarang.month - 5);
+    final bulan = List<DateTime>.generate(
+      6,
+      (index) => DateTime(bulanAwal.year, bulanAwal.month + index),
+    );
+    final pengeluaranBulanan = List<double>.filled(6, 0);
+
+    for (final transaksi in daftarTransaksi) {
+      if (transaksi.tipe != 'Pengeluaran') {
+        continue;
+      }
+      final index =
+          (transaksi.tanggal.year - bulanAwal.year) * 12 +
+          transaksi.tanggal.month -
+          bulanAwal.month;
+      if (index >= 0 && index < pengeluaranBulanan.length) {
+        pengeluaranBulanan[index] += transaksi.nominal;
+      }
+    }
+
+    final pengeluaranMaksimal = pengeluaranBulanan.fold<double>(
+      0,
+      (maximum, value) => value > maximum ? value : maximum,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,14 +61,18 @@ class LaporanScreen extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: dataGrafik.map((data) {
+                  children: List<Widget>.generate(bulan.length, (index) {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         // batang grafik
                         Container(
                           width: 32,
-                          height: (180 * data['nilai']).toDouble(),
+                          height: pengeluaranMaksimal == 0
+                              ? 0
+                              : 180 *
+                                    (pengeluaranBulanan[index] /
+                                        pengeluaranMaksimal),
                           decoration: BoxDecoration(
                             color: const Color(0xFFB5E48C),
                             border: Border.all(color: Colors.black, width: 2),
@@ -61,7 +84,7 @@ class LaporanScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         // label bulan
                         Text(
-                          data['bulan'],
+                          _namaBulan(bulan[index].month),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -69,7 +92,7 @@ class LaporanScreen extends StatelessWidget {
                         ),
                       ],
                     );
-                  }).toList(),
+                  }),
                 ),
               ],
             ),
@@ -77,5 +100,23 @@ class LaporanScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _namaBulan(int month) {
+    const namaBulan = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return namaBulan[month - 1];
   }
 }

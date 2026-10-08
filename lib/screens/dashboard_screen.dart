@@ -9,11 +9,17 @@ import '../widgets/brutalist_card.dart';
 class DashboardScreen extends StatefulWidget {
   final List<Transaksi> daftarTransaksi;
   final void Function(Transaksi transaksi) onDetailTransaksi;
+  final double totalSaldo;
+  final double totalPemasukan;
+  final double totalPengeluaran;
 
   const DashboardScreen({
     super.key,
     required this.daftarTransaksi,
     required this.onDetailTransaksi,
+    required this.totalSaldo,
+    required this.totalPemasukan,
+    required this.totalPengeluaran,
   });
 
   @override
@@ -64,16 +70,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return widget.daftarTransaksi.where((transaksi) {
       final judul = transaksi.judul.toLowerCase();
       final tipe = transaksi.tipe.toLowerCase();
-      return judul.contains(query) || tipe.contains(query);
+      final kategori = transaksi.kategori.toLowerCase();
+      return judul.contains(query) ||
+          tipe.contains(query) ||
+          kategori.contains(query);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Menghitung total statis
-    double totalSaldo = 15000000;
-    double totalPemasukan = 5000000;
-    double totalPengeluaran = 150000;
     final filteredTransaksi = _getFilteredTransaksi();
 
     return SingleChildScrollView(
@@ -133,14 +138,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 focusNode: _searchFocusNode,
                                 textInputAction: TextInputAction.search,
                                 keyboardType: TextInputType.text,
-                                    onChanged: (_) => setState(() {}),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Cari transaksi...',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                  ),
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                  hintText: 'Cari transaksi...',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -189,7 +194,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          _isSaldoVisible ? formatRupiah(totalSaldo) : '****',
+                          _isSaldoVisible
+                              ? formatRupiah(widget.totalSaldo)
+                              : '****',
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
@@ -233,7 +240,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        formatRupiah(totalPemasukan),
+                        formatRupiah(widget.totalPemasukan),
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ],
@@ -254,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        formatRupiah(totalPengeluaran),
+                        formatRupiah(widget.totalPengeluaran),
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ],

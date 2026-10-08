@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/budget.dart';
 import '../models/transaksi.dart';
+import '../services/finance_repository.dart';
 import '../utils/format_rupiah.dart';
 import '../widgets/brutalist_card.dart';
 import 'budget_screen.dart';
@@ -17,33 +19,57 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // state
-  int _selectedIndex = 0;
+  static const double _saldoAwal = 10150000;
 
-  // data dummy
-  final List<Transaksi> _daftarTransaksi = [
-    Transaksi(
-      id: '1',
-      judul: 'Gaji Bulanan',
-      nominal: 5000000,
-      tipe: 'Pemasukan',
-      tanggal: DateTime.now(),
-    ),
-    Transaksi(
-      id: '2',
-      judul: 'Makan Siang',
-      nominal: 50000,
-      tipe: 'Pengeluaran',
-      tanggal: DateTime.now(),
-    ),
-    Transaksi(
-      id: '3',
-      judul: 'Beli Kuota',
-      nominal: 100000,
-      tipe: 'Pengeluaran',
-      tanggal: DateTime.now(),
-    ),
-  ];
+  int _selectedIndex = 0;
+  final FinanceRepository _repository = FinanceRepository();
+  final TextEditingController _judulController = TextEditingController();
+  final TextEditingController _nominalController = TextEditingController();
+  List<Transaksi> _daftarTransaksi = [];
+  List<Budget> _daftarBudget = [];
+  bool _isReady = false;
+  String? _loadError;
+
+  @override
+  void dispose() {
+    _judulController.dispose();
+    _nominalController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFinanceData();
+  }
+
+  Future<void> _loadFinanceData() async {
+    try {
+      final data = await _repository.load();
+      if (!mounted) return;
+      setState(() {
+        _daftarTransaksi = data.transaksi;
+        _daftarBudget = data.anggaran;
+        _isReady = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error.toString();
+        _isReady = true;
+      });
+    }
+  }
+
+  double get _totalPemasukan => _daftarTransaksi
+      .where((transaksi) => transaksi.tipe == 'Pemasukan')
+      .fold(0, (total, transaksi) => total + transaksi.nominal);
+
+  double get _totalPengeluaran => _daftarTransaksi
+      .where((transaksi) => transaksi.tipe == 'Pengeluaran')
+      .fold(0, (total, transaksi) => total + transaksi.nominal);
+
+  double get _totalSaldo => _saldoAwal + _totalPemasukan - _totalPengeluaran;
 
   // navigasi fungsi
   void _onItemTapped(int index) {
@@ -104,13 +130,43 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _tambahTransaksi() {
-    final judulController = TextEditingController();
-    final nominalController = TextEditingController();
+  double? _parseNominal(String input) {
+    var normalized = input.trim().replaceAll(RegExp(r'\s+'), '');
+    normalized = normalized.replaceFirst(
+      RegExp(r'^Rp\.?', caseSensitive: false),
+      '',
+    );
+    if (!RegExp(r'^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d+)?$')
+        .hasMatch(normalized)) {
+      return null;
+    }
+
+    normalized = normalized.replaceAll('.', '').replaceFirst(',', '.');
+    final value = double.tryParse(normalized);
+    return value != null && value.isFinite && value > 0 ? value : null;
+  }
+
+  Future<void> _tambahTransaksi() async {
+    if (!_isReady || _loadError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _loadError == null
+                ? 'Data masih dimuat. Coba lagi sebentar.'
+                : 'Data gagal dimuat: $_loadError',
+          ),
+        ),
+      );
+      return;
+    }
+
+    _judulController.clear();
+    _nominalController.clear();
     String tipeTransaksi = 'Pengeluaran';
     DateTime tanggalTransaksi = DateTime.now();
+    bool sedangMenyimpan = false;
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
@@ -127,7 +183,7 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     TextField(
                       key: const ValueKey('judul'),
-                      controller: judulController,
+                      controller: _judulController,
                       decoration: const InputDecoration(
                         labelText: 'Judul transaksi',
                         border: OutlineInputBorder(),
@@ -136,7 +192,7 @@ class _MainScreenState extends State<MainScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       key: const ValueKey('nominal'),
-                      controller: nominalController,
+                      controller: _nominalController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Nominal',
@@ -201,45 +257,71 @@ class _MainScreenState extends State<MainScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
+                  onPressed: sedangMenyimpan
+                      ? null
+                      : () => Navigator.pop(dialogContext),
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    final judul = judulController.text.trim();
-                    final nominal = double.tryParse(nominalController.text);
+                  onPressed: sedangMenyimpan
+                      ? null
+                      : () async {
+                          final judul = _judulController.text.trim();
+                          final nominal = _parseNominal(
+                            _nominalController.text,
+                          );
 
-                    if (judul.isEmpty || nominal == null || nominal <= 0) {
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Judul dan nominal transaksi harus valid.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
+                          if (judul.isEmpty || nominal == null) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Judul dan nominal transaksi harus valid.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                    setState(() {
-                      _daftarTransaksi.insert(
-                        0,
-                        Transaksi(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          judul: judul,
-                          nominal: nominal,
-                          tipe: tipeTransaksi,
-                          tanggal: tanggalTransaksi,
-                        ),
-                      );
-                    });
+                          setDialogState(() => sedangMenyimpan = true);
+                          final transaksiBaru = Transaksi(
+                            id: DateTime.now().microsecondsSinceEpoch
+                                .toString(),
+                            judul: judul,
+                            nominal: nominal,
+                            tipe: tipeTransaksi,
+                            tanggal: tanggalTransaksi,
+                          );
+                          final transaksiTerbaru = [
+                            ..._daftarTransaksi,
+                            transaksiBaru,
+                          ]..sort((a, b) => b.tanggal.compareTo(a.tanggal));
 
-                    Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Transaksi berhasil ditambahkan.'),
-                      ),
-                    );
-                  },
+                          try {
+                            await _repository.saveTransactions(
+                              transaksiTerbaru,
+                            );
+                            if (!mounted || !dialogContext.mounted) return;
+                            setState(() => _daftarTransaksi = transaksiTerbaru);
+                            Navigator.pop(dialogContext);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Transaksi berhasil ditambahkan.',
+                                ),
+                              ),
+                            );
+                          } catch (error) {
+                            if (!dialogContext.mounted) return;
+                            setDialogState(() => sedangMenyimpan = false);
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Transaksi gagal disimpan: $error',
+                                ),
+                              ),
+                            );
+                          }
+                        },
                   child: const Text('Tambah'),
                 ),
               ],
@@ -257,18 +339,35 @@ class _MainScreenState extends State<MainScreen> {
       DashboardScreen(
         daftarTransaksi: _daftarTransaksi,
         onDetailTransaksi: _tampilkanDetailTransaksi,
+        totalSaldo: _totalSaldo,
+        totalPemasukan: _totalPemasukan,
+        totalPengeluaran: _totalPengeluaran,
       ),
       TransaksiScreen(
         daftarTransaksi: _daftarTransaksi,
         onDetailTransaksi: _tampilkanDetailTransaksi,
       ),
-      const BudgetScreen(),
-      const LaporanScreen(),
+      BudgetScreen(
+        daftarBudget: _daftarBudget,
+        daftarTransaksi: _daftarTransaksi,
+      ),
+      LaporanScreen(daftarTransaksi: _daftarTransaksi),
     ];
 
     return Scaffold(
       // body
-      body: SafeArea(child: halaman[_selectedIndex]),
+      body: SafeArea(
+        child: !_isReady
+            ? const Center(child: CircularProgressIndicator())
+            : _loadError != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('Gagal memuat data keuangan: $_loadError'),
+                ),
+              )
+            : halaman[_selectedIndex],
+      ),
       // floating button
       floatingActionButton: BrutalistCard(
         backgroundColor: const Color(0xFFFFD166), // Kuning
@@ -276,7 +375,7 @@ class _MainScreenState extends State<MainScreen> {
         width: 60,
         height: 60,
         child: IconButton(
-          onPressed: _tambahTransaksi,
+          onPressed: _isReady && _loadError == null ? _tambahTransaksi : null,
           icon: const Icon(Icons.add, size: 32, color: Colors.black),
         ),
       ),

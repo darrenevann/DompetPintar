@@ -1,36 +1,37 @@
 import 'package:flutter/material.dart';
 
+import '../models/budget.dart';
+import '../models/transaksi.dart';
 import '../utils/format_rupiah.dart';
 import '../widgets/app_header.dart';
 import '../widgets/brutalist_card.dart';
 
 // halaman budget
 class BudgetScreen extends StatelessWidget {
-  const BudgetScreen({super.key});
+  final List<Budget> daftarBudget;
+  final List<Transaksi> daftarTransaksi;
+
+  const BudgetScreen({
+    super.key,
+    required this.daftarBudget,
+    required this.daftarTransaksi,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // data dummy
-    final List<Map<String, dynamic>> daftarBudget = [
-      {
-        'kategori': 'Makanan',
-        'terpakai': 1500000,
-        'total': 2000000,
-        'warna': const Color(0xFFB5E48C),
-      },
-      {
-        'kategori': 'Transportasi',
-        'terpakai': 850000,
-        'total': 750000,
-        'warna': const Color(0xFFFF9E9E),
-      },
-      {
-        'kategori': 'Hiburan',
-        'terpakai': 300000,
-        'total': 1000000,
-        'warna': const Color(0xFFFFD166),
-      },
-    ];
+    final sekarang = DateTime.now();
+    final pengeluaranPerKategori = <String, double>{};
+    for (final transaksi in daftarTransaksi) {
+      if (transaksi.tipe == 'Pengeluaran' &&
+          transaksi.tanggal.year == sekarang.year &&
+          transaksi.tanggal.month == sekarang.month) {
+        pengeluaranPerKategori.update(
+          transaksi.kategori,
+          (total) => total + transaksi.nominal,
+          ifAbsent: () => transaksi.nominal,
+        );
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,11 +48,13 @@ class BudgetScreen extends StatelessWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final budget = daftarBudget[index];
-              // perhitungan rasio
-              final double rasio = (budget['terpakai'] / budget['total']).clamp(
-                0.0,
-                1.0,
-              );
+              final terpakai = pengeluaranPerKategori[budget.kategori] ?? 0;
+              final rasio = (terpakai / budget.batas).clamp(0.0, 1.0);
+              final warna = switch (budget.kategori) {
+                'Transportasi' => const Color(0xFFFF9E9E),
+                'Hiburan' => const Color(0xFFFFD166),
+                _ => const Color(0xFFB5E48C),
+              };
 
               return BrutalistCard(
                 child: Column(
@@ -62,14 +65,14 @@ class BudgetScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          budget['kategori'],
+                          budget.kategori,
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 18,
                           ),
                         ),
                         Text(
-                          '${formatRupiah(budget['terpakai'])} / ${formatRupiah(budget['total'])}',
+                          '${formatRupiah(terpakai)} / ${formatRupiah(budget.batas)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -106,7 +109,7 @@ class BudgetScreen extends StatelessWidget {
                                 height: 24,
                                 width: maxWidth * rasio,
                                 decoration: BoxDecoration(
-                                  color: budget['warna'],
+                                  color: warna,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Colors.black,
