@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/budget.dart';
 import '../models/transaksi.dart';
@@ -13,99 +14,84 @@ class FinanceData {
 }
 
 class FinanceRepository {
-  static const _transactionsKey = 'finance.transactions.v1';
-  static const _budgetsKey = 'finance.budgets.v1';
+  static const _alamatApi = String.fromEnvironment('API_URL');
+  static const _waktuTunggu = Duration(seconds: 8);
+  static const _headerJson = {'Content-Type': 'application/json'};
 
-  static final List<Transaksi> _defaultTransactions = [
-    Transaksi(
-      id: '1',
-      judul: 'Gaji Bulanan',
-      nominal: 5000000,
-      tipe: 'Pemasukan',
-      tanggal: DateTime.now(),
-      kategori: 'Pemasukan',
-    ),
-    Transaksi(
-      id: '2',
-      judul: 'Makan Siang',
-      nominal: 50000,
-      tipe: 'Pengeluaran',
-      tanggal: DateTime.now(),
-    ),
-    Transaksi(
-      id: '3',
-      judul: 'Beli Kuota',
-      nominal: 100000,
-      tipe: 'Pengeluaran',
-      tanggal: DateTime.now(),
-    ),
-  ];
+  final http.Client _client;
 
-  static const List<Budget> _defaultBudgets = [
-    Budget(kategori: 'Makanan', batas: 2000000),
-    Budget(kategori: 'Transportasi', batas: 750000),
-    Budget(kategori: 'Hiburan', batas: 1000000),
-    Budget(kategori: 'Lainnya', batas: 1000000),
-  ];
+  FinanceRepository({http.Client? client}) : _client = client ?? http.Client();
+
+  Uri _alamat(String jalur) {
+    final alamat = _alamatApi.isNotEmpty
+        ? _alamatApi
+        : !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? 'http://10.0.2.2:8000'
+        : 'http://127.0.0.1:8000';
+    return Uri.parse('${alamat.replaceFirst(RegExp(r'/+$'), '')}/$jalur');
+  }
 
   Future<FinanceData> load() async {
-    final preferences = await SharedPreferences.getInstance();
-    final transactionsJson = preferences.getString(_transactionsKey);
-    final budgetsJson = preferences.getString(_budgetsKey);
-
-    final transactions = transactionsJson == null
-        ? List<Transaksi>.of(_defaultTransactions)
-        : _decodeList(transactionsJson, Transaksi.fromJson);
-    final budgets = budgetsJson == null
-        ? List<Budget>.of(_defaultBudgets)
-        : _decodeList(budgetsJson, Budget.fromJson);
-
-    if (transactionsJson == null) {
-      await saveTransactions(transactions);
-    }
-    if (budgetsJson == null) {
-      await saveBudgets(budgets);
-    }
-
-    return FinanceData(transaksi: transactions, anggaran: budgets);
+    final respons = await Future.wait([
+      _client.get(_alamat('transaksi')).timeout(_waktuTunggu),
+      _client.get(_alamat('anggaran')).timeout(_waktuTunggu),
+    ]);
+    final transaksi =
+        (_bacaRespons(respons[0]) as List)
+            .map((item) => Transaksi.fromJson(item as Map<String, dynamic>))
+            .toList()
+          ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+    final anggaran = (_bacaRespons(respons[1]) as List)
+        .map((item) => Budget.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return FinanceData(transaksi: transaksi, anggaran: anggaran);
   }
 
-  Future<void> saveTransactions(List<Transaksi> transactions) async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = await preferences.setString(
-      _transactionsKey,
-      jsonEncode(transactions.map((transaction) => transaction.toJson()).toList()),
-    );
-    if (!saved) {
-      throw StateError('Transaksi gagal disimpan ke penyimpanan lokal.');
-    }
+  Future<Transaksi> simpanTransaksi(
+    Transaksi transaksi, {
+    required bool edit,
+  }) async {
+    final isi = jsonEncode(transaksi.toJson());
+    final respons = edit
+        ? await _client
+              .put(
+                _alamat('transaksi/${Uri.encodeComponent(transaksi.id)}'),
+                headers: _headerJson,
+                body: isi,
+              )
+              .timeout(_waktuTunggu)
+        : await _client
+              .post(_alamat('transaksi'), headers: _headerJson, body: isi)
+              .timeout(_waktuTunggu);
+    return Transaksi.fromJson(_bacaRespons(respons) as Map<String, dynamic>);
   }
 
-  Future<void> saveBudgets(List<Budget> budgets) async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = await preferences.setString(
-      _budgetsKey,
-      jsonEncode(budgets.map((budget) => budget.toJson()).toList()),
-    );
-    if (!saved) {
-      throw StateError('Anggaran gagal disimpan ke penyimpanan lokal.');
-    }
+  Future<void> hapusTransaksi(String id) async {
+    final respons = await _client
+        .delete(_alamat('transaksi/${Uri.encodeComponent(id)}'))
+        .timeout(_waktuTunggu);
+    _bacaRespons(respons);
   }
 
-  List<T> _decodeList<T>(
-    String encoded,
-    T Function(Map<String, dynamic>) fromJson,
-  ) {
-    final decoded = jsonDecode(encoded);
-    if (decoded is! List) {
-      throw const FormatException('Data keuangan tersimpan tidak valid.');
-    }
-
-    return decoded.map((item) {
-      if (item is! Map<String, dynamic>) {
-        throw const FormatException('Data keuangan tersimpan tidak valid.');
-      }
-      return fromJson(item);
-    }).toList();
+  Future<Budget> simpanAnggaran(Budget budget) async {
+    final respons = await _client
+        .put(
+          _alamat('anggaran/${Uri.encodeComponent(budget.kategori)}'),
+          headers: _headerJson,
+          body: jsonEncode(budget.toJson()),
+        )
+        .timeout(_waktuTunggu);
+    return Budget.fromJson(_bacaRespons(respons) as Map<String, dynamic>);
   }
+
+  dynamic _bacaRespons(http.Response respons) {
+    if (respons.statusCode == 204) return null;
+    final data = jsonDecode(utf8.decode(respons.bodyBytes));
+    if (respons.statusCode < 200 || respons.statusCode >= 300) {
+      throw Exception(data is Map ? data['pesan'] : 'Permintaan API gagal.');
+    }
+    return data;
+  }
+
+  void tutup() => _client.close();
 }

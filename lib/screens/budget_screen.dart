@@ -9,11 +9,13 @@ import '../widgets/brutalist_card.dart';
 // halaman budget
 class BudgetScreen extends StatelessWidget {
   final List<Budget> daftarBudget;
+  final ValueChanged<Budget> onEditAnggaran;
   final List<Transaksi> daftarTransaksi;
 
   const BudgetScreen({
     super.key,
     required this.daftarBudget,
+    required this.onEditAnggaran,
     required this.daftarTransaksi,
   });
 
@@ -64,21 +66,28 @@ class BudgetScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          budget.kategori,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
+                        Expanded(
+                          child: Text(
+                            budget.kategori,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
                           ),
                         ),
-                        Text(
-                          '${formatRupiah(terpakai)} / ${formatRupiah(budget.batas)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        IconButton(
+                          tooltip: 'Edit anggaran ${budget.kategori}',
+                          onPressed: () => onEditAnggaran(budget),
+                          icon: const Icon(Icons.edit_outlined),
                         ),
                       ],
+                    ),
+                    Text(
+                      '${formatRupiah(terpakai)} / ${formatRupiah(budget.batas)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 16),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/budget.dart';
 import '../models/transaksi.dart';
@@ -12,7 +13,9 @@ import 'transaksi_screen.dart';
 
 // main screen
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final http.Client? client;
+
+  const MainScreen({super.key, this.client});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -22,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
   static const double _saldoAwal = 10150000;
 
   int _selectedIndex = 0;
-  final FinanceRepository _repository = FinanceRepository();
+  late final FinanceRepository _repository;
   final TextEditingController _judulController = TextEditingController();
   final TextEditingController _nominalController = TextEditingController();
   List<Transaksi> _daftarTransaksi = [];
@@ -32,6 +35,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    _repository.tutup();
     _judulController.dispose();
     _nominalController.dispose();
     super.dispose();
@@ -40,6 +44,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _repository = FinanceRepository(client: widget.client);
     _loadFinanceData();
   }
 
@@ -50,6 +55,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         _daftarTransaksi = data.transaksi;
         _daftarBudget = data.anggaran;
+        _loadError = null;
         _isReady = true;
       });
     } catch (error) {
@@ -105,6 +111,20 @@ class _MainScreenState extends State<MainScreen> {
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _konfirmasiHapus(transaksi);
+              },
+              child: const Text('Hapus'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _tambahTransaksi(transaksi);
+              },
+              child: const Text('Edit'),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Tutup'),
             ),
@@ -146,7 +166,123 @@ class _MainScreenState extends State<MainScreen> {
     return value != null && value.isFinite && value > 0 ? value : null;
   }
 
-  Future<void> _tambahTransaksi() async {
+  Future<void> _konfirmasiHapus(Transaksi transaksi) async {
+    final hapus = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Transaksi'),
+        content: Text('Hapus transaksi "${transaksi.judul}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (hapus != true || !mounted) return;
+
+    try {
+      await _repository.hapusTransaksi(transaksi.id);
+      if (!mounted) return;
+      setState(() {
+        _daftarTransaksi.removeWhere((item) => item.id == transaksi.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaksi berhasil dihapus.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Transaksi gagal dihapus: $error')),
+      );
+    }
+  }
+
+  Future<void> _editAnggaran(Budget budget) async {
+    String input = budget.batas.toString().replaceFirst('.', ',');
+    bool sedangMenyimpan = false;
+    String? pesanError;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => PopScope(
+          canPop: !sedangMenyimpan,
+          child: AlertDialog(
+            title: Text('Anggaran ${budget.kategori}'),
+            content: TextFormField(
+              initialValue: input,
+              onChanged: (nilai) => input = nilai,
+              enabled: !sedangMenyimpan,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Batas anggaran',
+                prefixText: 'Rp. ',
+                border: const OutlineInputBorder(),
+                errorText: pesanError,
+                errorMaxLines: 3,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: sedangMenyimpan
+                    ? null
+                    : () => Navigator.pop(dialogContext),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: sedangMenyimpan
+                    ? null
+                    : () async {
+                        final batas = _parseNominal(input);
+                        if (batas == null) {
+                          setDialogState(
+                            () => pesanError = 'Masukkan nominal yang valid.',
+                          );
+                          return;
+                        }
+                        setDialogState(() {
+                          sedangMenyimpan = true;
+                          pesanError = null;
+                        });
+                        try {
+                          final anggaran = await _repository.simpanAnggaran(
+                            Budget(kategori: budget.kategori, batas: batas),
+                          );
+                          if (!mounted || !dialogContext.mounted) return;
+                          setState(() {
+                            final index = _daftarBudget.indexWhere(
+                              (item) => item.kategori == anggaran.kategori,
+                            );
+                            _daftarBudget[index] = anggaran;
+                          });
+                          Navigator.pop(dialogContext);
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() {
+                            sedangMenyimpan = false;
+                            pesanError = 'Anggaran gagal disimpan. Coba lagi.';
+                          });
+                        }
+                      },
+                child: const Text('Simpan'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _tambahTransaksi([Transaksi? transaksi]) async {
     if (!_isReady || _loadError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -160,171 +296,192 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
-    _judulController.clear();
-    _nominalController.clear();
-    String tipeTransaksi = 'Pengeluaran';
-    DateTime tanggalTransaksi = DateTime.now();
+    _judulController.text = transaksi?.judul ?? '';
+    _nominalController.text =
+        transaksi?.nominal.toString().replaceFirst('.', ',') ?? '';
+    String tipeTransaksi = transaksi?.tipe ?? 'Pengeluaran';
+    DateTime tanggalTransaksi = transaksi?.tanggal ?? DateTime.now();
+    final id =
+        transaksi?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
     bool sedangMenyimpan = false;
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text(
-                'Tambah Transaksi',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      key: const ValueKey('judul'),
-                      controller: _judulController,
-                      decoration: const InputDecoration(
-                        labelText: 'Judul transaksi',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      key: const ValueKey('nominal'),
-                      controller: _nominalController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Nominal',
-                        prefixText: 'Rp. ',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      key: const ValueKey('tipe'),
-                      initialValue: tipeTransaksi,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipe transaksi',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Pemasukan',
-                          child: Text('Pemasukan'),
+            return PopScope(
+              canPop: !sedangMenyimpan,
+              child: AlertDialog(
+                title: Text(
+                  transaksi == null ? 'Tambah Transaksi' : 'Edit Transaksi',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        key: const ValueKey('judul'),
+                        controller: _judulController,
+                        decoration: const InputDecoration(
+                          labelText: 'Judul transaksi',
+                          border: OutlineInputBorder(),
                         ),
-                        DropdownMenuItem(
-                          value: 'Pengeluaran',
-                          child: Text('Pengeluaran'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        key: const ValueKey('nominal'),
+                        controller: _nominalController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Nominal',
+                          prefixText: 'Rp. ',
+                          border: OutlineInputBorder(),
                         ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() => tipeTransaksi = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Tanggal: ${tanggalTransaksi.day}/${tanggalTransaksi.month}/${tanggalTransaksi.year}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        key: const ValueKey('tipe'),
+                        initialValue: tipeTransaksi,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipe transaksi',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Pemasukan',
+                            child: Text('Pemasukan'),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            final tanggalDipilih = await showDatePicker(
-                              context: context,
-                              initialDate: tanggalTransaksi,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2035),
-                            );
-
-                            if (tanggalDipilih != null) {
-                              setDialogState(() {
-                                tanggalTransaksi = tanggalDipilih;
-                              });
-                            }
-                          },
-                          child: const Text('Pilih tanggal'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: sedangMenyimpan
-                      ? null
-                      : () => Navigator.pop(dialogContext),
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: sedangMenyimpan
-                      ? null
-                      : () async {
-                          final judul = _judulController.text.trim();
-                          final nominal = _parseNominal(
-                            _nominalController.text,
-                          );
-
-                          if (judul.isEmpty || nominal == null) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Judul dan nominal transaksi harus valid.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => sedangMenyimpan = true);
-                          final transaksiBaru = Transaksi(
-                            id: DateTime.now().microsecondsSinceEpoch
-                                .toString(),
-                            judul: judul,
-                            nominal: nominal,
-                            tipe: tipeTransaksi,
-                            tanggal: tanggalTransaksi,
-                          );
-                          final transaksiTerbaru = [
-                            ..._daftarTransaksi,
-                            transaksiBaru,
-                          ]..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-
-                          try {
-                            await _repository.saveTransactions(
-                              transaksiTerbaru,
-                            );
-                            if (!mounted || !dialogContext.mounted) return;
-                            setState(() => _daftarTransaksi = transaksiTerbaru);
-                            Navigator.pop(dialogContext);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Transaksi berhasil ditambahkan.',
-                                ),
-                              ),
-                            );
-                          } catch (error) {
-                            if (!dialogContext.mounted) return;
-                            setDialogState(() => sedangMenyimpan = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Transaksi gagal disimpan: $error',
-                                ),
-                              ),
-                            );
+                          DropdownMenuItem(
+                            value: 'Pengeluaran',
+                            child: Text('Pengeluaran'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => tipeTransaksi = value);
                           }
                         },
-                  child: const Text('Tambah'),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Tanggal: ${tanggalTransaksi.day}/${tanggalTransaksi.month}/${tanggalTransaksi.year}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final tanggalDipilih = await showDatePicker(
+                                context: context,
+                                initialDate: tanggalTransaksi,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2035),
+                              );
+
+                              if (tanggalDipilih != null) {
+                                setDialogState(() {
+                                  tanggalTransaksi = tanggalDipilih;
+                                });
+                              }
+                            },
+                            child: const Text('Pilih tanggal'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+                actions: [
+                  TextButton(
+                    onPressed: sedangMenyimpan
+                        ? null
+                        : () => Navigator.pop(dialogContext),
+                    child: const Text('Batal'),
+                  ),
+                  ElevatedButton(
+                    onPressed: sedangMenyimpan
+                        ? null
+                        : () async {
+                            final judul = _judulController.text.trim();
+                            final nominal = _parseNominal(
+                              _nominalController.text,
+                            );
+
+                            if (judul.isEmpty || nominal == null) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Judul dan nominal transaksi harus valid.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setDialogState(() => sedangMenyimpan = true);
+                            final transaksiBaru = Transaksi(
+                              id: id,
+                              judul: judul,
+                              nominal: nominal,
+                              tipe: tipeTransaksi,
+                              tanggal: tanggalTransaksi,
+                              kategori: tipeTransaksi == 'Pemasukan'
+                                  ? 'Pemasukan'
+                                  : null,
+                            );
+
+                            try {
+                              final tersimpan = await _repository
+                                  .simpanTransaksi(
+                                    transaksiBaru,
+                                    edit: transaksi != null,
+                                  );
+                              if (!mounted || !dialogContext.mounted) return;
+                              setState(() {
+                                _daftarTransaksi =
+                                    [
+                                      ..._daftarTransaksi.where(
+                                        (item) => item.id != id,
+                                      ),
+                                      tersimpan,
+                                    ]..sort(
+                                      (a, b) => b.tanggal.compareTo(a.tanggal),
+                                    );
+                              });
+                              Navigator.pop(dialogContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    transaksi == null
+                                        ? 'Transaksi berhasil ditambahkan.'
+                                        : 'Transaksi berhasil diubah.',
+                                  ),
+                                ),
+                              );
+                            } catch (error) {
+                              if (!dialogContext.mounted) return;
+                              setDialogState(() => sedangMenyimpan = false);
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Transaksi gagal disimpan: $error',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                    child: Text(transaksi == null ? 'Tambah' : 'Simpan'),
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -349,6 +506,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       BudgetScreen(
         daftarBudget: _daftarBudget,
+        onEditAnggaran: _editAnggaran,
         daftarTransaksi: _daftarTransaksi,
       ),
       LaporanScreen(daftarTransaksi: _daftarTransaksi),
@@ -363,7 +521,22 @@ class _MainScreenState extends State<MainScreen> {
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text('Gagal memuat data keuangan: $_loadError'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Gagal memuat data. Pastikan server API berjalan.',
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() => _isReady = false);
+                          _loadFinanceData();
+                        },
+                        child: const Text('Coba lagi'),
+                      ),
+                    ],
+                  ),
                 ),
               )
             : halaman[_selectedIndex],
@@ -375,7 +548,9 @@ class _MainScreenState extends State<MainScreen> {
         width: 60,
         height: 60,
         child: IconButton(
-          onPressed: _isReady && _loadError == null ? _tambahTransaksi : null,
+          onPressed: _isReady && _loadError == null
+              ? () => _tambahTransaksi()
+              : null,
           icon: const Icon(Icons.add, size: 32, color: Colors.black),
         ),
       ),

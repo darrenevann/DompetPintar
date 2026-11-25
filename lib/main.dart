@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'screens/main_screen.dart';
 
@@ -10,7 +11,9 @@ void main() {
 
 // main app
 class DompetPintarApp extends StatelessWidget {
-  const DompetPintarApp({super.key});
+  final http.Client? client;
+
+  const DompetPintarApp({super.key, this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +23,7 @@ class DompetPintarApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFFAF9F6),
         fontFamily: 'Roboto',
       ),
-      home: const MainScreen(),
+      home: MainScreen(client: client),
       debugShowCheckedModeBanner: false,
     );
   }
